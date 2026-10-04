@@ -19,7 +19,7 @@ public class UsuarioApiService {
     private final HttpJsonClient client = new HttpJsonClient();
 
     public List<Usuario> listarTodos() {
-        JSONArray array = client.getArray("/usuarios");
+        JSONArray array = client.getArray("/usuario");
         List<Usuario> usuarios = new ArrayList<>();
         for (int i = 0; i < array.length(); i++) {
             try {
@@ -31,7 +31,7 @@ public class UsuarioApiService {
     }
 
     public Usuario buscarPorId(long id) {
-        JSONObject json = client.getObject("/usuarios/" + id);
+        JSONObject json = client.getObject("/usuario/" + id);
         if (json == null) {
             return null;
         }
@@ -43,7 +43,7 @@ public class UsuarioApiService {
     }
 
     public Usuario buscarPorEmail(String email) {
-        JSONObject json = client.getObject("/usuarios/email/" + URLEncoder.encode(email, StandardCharsets.UTF_8));
+        JSONObject json = client.getObject("/usuario/email/" + URLEncoder.encode(email, StandardCharsets.UTF_8));
         if (json == null) {
             return null;
         }
@@ -57,13 +57,16 @@ public class UsuarioApiService {
     public Usuario salvar(Usuario usuario) {
         try {
             JSONObject body = new JSONObject();
+            if (usuario.getId() != null) {
+                body.put("id", usuario.getId());
+            }
             body.put("nome", usuario.getNome());
             body.put("email", usuario.getEmail());
             body.put("senha", usuario.getSenhaHash());
             body.put("role", usuario.getTipoPerfil() == null ? JSONObject.NULL : usuario.getTipoPerfil().name());
             JSONObject json = usuario.getId() == null
-                    ? client.post("/usuarios", body)
-                    : client.put("/usuarios/" + usuario.getId(), body);
+                    ? client.post("/usuario", body)
+                    : client.put("/usuario", body);
             return json == null ? null : toUsuario(json);
         } catch (JSONException e) {
             return null;
@@ -71,7 +74,20 @@ public class UsuarioApiService {
     }
 
     public void remover(long id) {
-        client.delete("/usuarios/" + id);
+        client.delete("/usuario/" + id);
+    }
+
+    // O servidor pode mandar "ADMIN", "TECNICO", "TÉCNICO", "USUARIO"...
+    // Aqui convertemos para os 3 perfis do app, sem travar se vier outro nome.
+    private TipoPerfil converterPerfil(String nome) {
+        String n = nome.toUpperCase().replace("É", "E");
+        if (n.startsWith("ADMIN")) {
+            return TipoPerfil.ADMINISTRADOR;
+        }
+        if (n.startsWith("TECNIC")) {
+            return TipoPerfil.TECNICO;
+        }
+        return TipoPerfil.SOLICITANTE;
     }
 
     private Usuario toUsuario(JSONObject json) throws JSONException {
@@ -84,17 +100,18 @@ public class UsuarioApiService {
         usuario.setAtivo(json.optBoolean("ativo", true));
         String dataCriacao = json.optString("dataCriacao", null);
         if (dataCriacao != null && !dataCriacao.isBlank() && !"null".equalsIgnoreCase(dataCriacao)) {
-            usuario.setDataCriacao(LocalDateTime.parse(dataCriacao));
+            try {
+                usuario.setDataCriacao(LocalDateTime.parse(dataCriacao));
+            } catch (Exception ignored) {
+                // formato de data diferente do esperado: ignora
+            }
         }
         String tipoPerfil = json.optString("tipoPerfil", null);
         if (tipoPerfil != null && !tipoPerfil.isBlank() && !"null".equalsIgnoreCase(tipoPerfil)) {
-            usuario.setTipoPerfil(TipoPerfil.valueOf(tipoPerfil));
+            usuario.setTipoPerfil(converterPerfil(tipoPerfil));
         }
         usuario.setSetorId(json.isNull("setorId") ? null : json.getLong("setorId"));
         usuario.setMatriculaOuRegistro(json.isNull("matriculaOuRegistro") ? null : json.getString("matriculaOuRegistro"));
-        usuario.setEspecialidade(json.isNull("especialidade") ? null : json.getString("especialidade"));
-        usuario.setNivelTecnico(json.isNull("nivelTecnico") ? null : json.getString("nivelTecnico"));
-        usuario.setDisponivel(json.optBoolean("disponivel", false));
         usuario.setNivelAcesso(json.isNull("nivelAcesso") ? null : json.getInt("nivelAcesso"));
         return usuario;
     }

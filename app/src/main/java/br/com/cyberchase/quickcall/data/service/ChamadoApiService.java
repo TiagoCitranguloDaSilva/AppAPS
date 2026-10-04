@@ -49,17 +49,25 @@ public class ChamadoApiService {
         }
     }
 
+    /**
+     * Cria (POST) ou atualiza (PUT) um chamado.
+     * Campos no formato que a API espera: titulo, descricao, idPrioridade, idStatus, idCategoria, idUsuario.
+     */
     public Chamado salvar(Chamado chamado) {
         try {
             JSONObject body = new JSONObject();
             if (chamado.getId() != null) {
                 body.put("id", chamado.getId());
             }
-            body.put("descricao", toApiDescricao(chamado));
-            body.put("nivelPrioridade", chamado.getPrioridadeId() == null ? 1 : chamado.getPrioridadeId().intValue());
-            body.put("status", toStatusName(chamado.getStatusId()));
-            body.put("usuarioId", chamado.getSolicitanteId());
-            body.put("categoriaId", chamado.getCategoriaId());
+            body.put("titulo", chamado.getTitulo());
+            body.put("descricao", chamado.getDescricao() == null ? chamado.getTitulo() : chamado.getDescricao());
+            body.put("idPrioridade", chamado.getPrioridadeId() == null ? 1 : chamado.getPrioridadeId());
+            body.put("idStatus", chamado.getStatusId() == null ? 1 : chamado.getStatusId());
+            body.put("idCategoria", chamado.getCategoriaId());
+            body.put("idUsuario", chamado.getSolicitanteId());
+            if (chamado.getTecnicoResponsavelId() != null) {
+                body.put("idTecnico", chamado.getTecnicoResponsavelId());
+            }
 
             JSONObject json = chamado.getId() == null
                     ? client.post("/chamado", body)
@@ -74,96 +82,68 @@ public class ChamadoApiService {
         return client.deleteResource("/chamado/" + id);
     }
 
+    /**
+     * Converte o JSON do servidor em um objeto Chamado. Exemplo do que chega:
+     * {"id":1,"descricao":"...","prioridade":{"nome":"Alta"},"dataAbertura":"2026-09-28T09:00:00",
+     *  "idUsuario":4,"status":{"id":2,"nome":"Em Atendimento"},"categoria":{"id":3,"nome":"Redes"}}
+     */
     private Chamado toChamado(JSONObject json) throws JSONException {
         Chamado chamado = new Chamado();
         chamado.setId(json.optLong("id"));
-        String descricaoApi = json.optString("descricao", null);
-        chamado.setTitulo(extrairTitulo(descricaoApi));
-        chamado.setDescricao(extrairDescricao(descricaoApi));
-        String dataAbertura = json.optString("dataAbertura", null);
-        if (dataAbertura != null && !dataAbertura.isBlank() && !"null".equals(dataAbertura)) {
-            chamado.setDataAbertura(LocalDateTime.parse(dataAbertura));
+
+        // A API ainda nao devolve "titulo". Enquanto isso, a descricao vira o titulo.
+        String descricao = texto(json, "descricao");
+        String titulo = texto(json, "titulo");
+        chamado.setTitulo(titulo != null ? titulo : descricao);
+        chamado.setDescricao(descricao);
+
+        String dataAbertura = texto(json, "dataAbertura");
+        if (dataAbertura != null) {
+            try {
+                chamado.setDataAbertura(LocalDateTime.parse(dataAbertura));
+            } catch (Exception ignored) {
+                // formato inesperado: deixa sem data
+            }
         }
-        chamado.setSolicitanteId(json.isNull("usuarioId") ? null : json.getLong("usuarioId"));
-        chamado.setCategoriaId(json.isNull("categoriaId") ? null : json.getLong("categoriaId"));
-        chamado.setPrioridadeId(json.isNull("nivelPrioridade") ? null : json.getLong("nivelPrioridade"));
-        chamado.setStatusId(toStatusId(json.optString("status", null)));
+
+        chamado.setSolicitanteId(json.isNull("idUsuario") ? null : json.optLong("idUsuario"));
+
+        JSONObject status = json.optJSONObject("status");
+        chamado.setStatusId(status == null ? null : status.optLong("id"));
+
+        JSONObject categoria = json.optJSONObject("categoria");
+        chamado.setCategoriaId(categoria == null ? null : categoria.optLong("id"));
+
+        // Prioridade vem so com o nome: procuramos o id pelo nome na lista de prioridades.
+        JSONObject prioridade = json.optJSONObject("prioridade");
+        chamado.setPrioridadeId(prioridade == null ? null : idDaPrioridade(prioridade.optString("nome", null)));
+
         return chamado;
     }
 
-    private Long toStatusId(String status) {
-        if (status == null) {
-            return 1L;
-        }
-        switch (status) {
-            case "EM_ANDAMENTO":
-                return 2L;
-            case "CONCLUIDO":
-                return 3L;
-            case "CANCELADO":
-                return 4L;
-            default:
-                return 1L;
-        }
-    }
+    private List<String> nomesPrioridades;
 
-    private String toStatusName(Long statusId) {
-        if (statusId == null) {
-            return "ABERTO";
-        }
-        switch (statusId.intValue()) {
-            case 2:
-                return "EM_ANDAMENTO";
-            case 3:
-                return "CONCLUIDO";
-            case 4:
-                return "CANCELADO";
-            default:
-                return "ABERTO";
-        }
-    }
-
-    private String toApiDescricao(Chamado chamado) {
-        String titulo = sanitize(chamado.getTitulo());
-        String descricao = sanitize(chamado.getDescricao());
-
-        if (titulo == null) {
-            return descricao;
-        }
-
-        if (descricao == null || descricao.equals(titulo)) {
-            return titulo;
-        }
-
-        return titulo + "\n\n" + descricao;
-    }
-
-    private String extrairTitulo(String descricaoApi) {
-        String valor = sanitize(descricaoApi);
-        if (valor == null) {
+    private Long idDaPrioridade(String nome) {
+        if (nome == null) {
             return null;
         }
-
-        int separador = valor.indexOf("\n\n");
-        return separador >= 0 ? valor.substring(0, separador).trim() : valor;
+        if (nomesPrioridades == null) {
+            nomesPrioridades = new ArrayList<>();
+            JSONArray array = client.getArray("/prioridade");
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject item = array.optJSONObject(i);
+                nomesPrioridades.add(item == null ? "" : item.optString("nome", ""));
+            }
+        }
+        int posicao = nomesPrioridades.indexOf(nome);
+        return posicao >= 0 ? (long) (posicao + 1) : null;
     }
 
-    private String extrairDescricao(String descricaoApi) {
-        String valor = sanitize(descricaoApi);
-        if (valor == null) {
+    private String texto(JSONObject json, String campo) {
+        if (json.isNull(campo)) {
             return null;
         }
-
-        int separador = valor.indexOf("\n\n");
-        return separador >= 0 ? valor.substring(separador + 2).trim() : valor;
-    }
-
-    private String sanitize(String valor) {
-        if (valor == null) {
-            return null;
-        }
-
-        String normalizado = valor.trim();
-        return normalizado.isEmpty() ? null : normalizado;
+        String valor = json.optString(campo, "").trim();
+        return valor.isEmpty() ? null : valor;
     }
 }

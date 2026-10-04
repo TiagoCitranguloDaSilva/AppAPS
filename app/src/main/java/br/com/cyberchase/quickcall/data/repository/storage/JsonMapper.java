@@ -28,9 +28,6 @@ public final class JsonMapper {
         json.put("tipoPerfil", usuario.getTipoPerfil() == null ? JSONObject.NULL : usuario.getTipoPerfil().name());
         json.put("setorId", nullableLong(usuario.getSetorId()));
         json.put("matriculaOuRegistro", nullableString(usuario.getMatriculaOuRegistro()));
-        json.put("especialidade", nullableString(usuario.getEspecialidade()));
-        json.put("nivelTecnico", nullableString(usuario.getNivelTecnico()));
-        json.put("disponivel", usuario.isDisponivel());
         json.put("nivelAcesso", nullableInteger(usuario.getNivelAcesso()));
         return json;
     }
@@ -48,9 +45,6 @@ public final class JsonMapper {
         usuario.setTipoPerfil(tipoPerfil == null || "null".equals(tipoPerfil) ? null : TipoPerfil.valueOf(tipoPerfil));
         usuario.setSetorId(json.isNull("setorId") ? null : json.getLong("setorId"));
         usuario.setMatriculaOuRegistro(json.isNull("matriculaOuRegistro") ? null : json.getString("matriculaOuRegistro"));
-        usuario.setEspecialidade(json.isNull("especialidade") ? null : json.getString("especialidade"));
-        usuario.setNivelTecnico(json.isNull("nivelTecnico") ? null : json.getString("nivelTecnico"));
-        usuario.setDisponivel(json.optBoolean("disponivel", false));
         usuario.setNivelAcesso(json.isNull("nivelAcesso") ? null : json.getInt("nivelAcesso"));
         return usuario;
     }

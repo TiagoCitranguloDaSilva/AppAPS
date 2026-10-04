@@ -3,7 +3,6 @@ package br.com.cyberchase.quickcall.data.service;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import br.com.cyberchase.quickcall.model.TipoPerfil;
 import br.com.cyberchase.quickcall.model.Usuario;
 import br.com.cyberchase.quickcall.network.HttpJsonClient;
 
@@ -11,25 +10,31 @@ public class LoginApiService {
 
     private final HttpJsonClient client = new HttpJsonClient();
 
+    /**
+     * Passo 1: manda email e senha para /auth/login e recebe um token.
+     * Passo 2: guarda o token (todos os pedidos seguintes usam ele).
+     * Passo 3: busca nome, id e perfil do usuario em /usuario/email/{email}.
+     * Retorna null se email/senha estiverem errados ou o servidor estiver desligado.
+     */
     public Usuario login(String email, String senha) {
         try {
             JSONObject body = new JSONObject();
             body.put("email", email);
             body.put("senha", senha);
 
-            JSONObject json = client.post("/login", body);
-            if (json == null) {
+            HttpJsonClient.setToken(null);
+            JSONObject json = client.post("/auth/login", body);
+            if (json == null || !json.has("token")) {
                 return null;
             }
 
-            Usuario usuario = new Usuario();
-            usuario.setId(json.optLong("id"));
-            usuario.setNome(json.optString("nome", null));
-            String role = json.optString("role", null);
-            if (role != null && !role.isBlank() && !"null".equalsIgnoreCase(role)) {
-                usuario.setTipoPerfil(TipoPerfil.valueOf(role));
+            HttpJsonClient.setToken(json.getString("token"));
+
+            Usuario usuario = new UsuarioApiService().buscarPorEmail(email);
+            if (usuario == null || usuario.getId() == null || usuario.getId() == 0) {
+                HttpJsonClient.setToken(null);
+                return null;
             }
-            usuario.setEmail(email);
             return usuario;
         } catch (JSONException e) {
             return null;
