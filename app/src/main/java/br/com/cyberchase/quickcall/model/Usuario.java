@@ -2,6 +2,11 @@ package br.com.cyberchase.quickcall.model;
 
 import java.time.LocalDateTime;
 
+/**
+ * Classe base de qualquer pessoa que usa o sistema.
+ * Pela especificacao, Solicitante, Tecnico e Administrador herdam desta classe.
+ * Os dados que sao so do tecnico ficam na classe Tecnico.
+ */
 public class Usuario {
 
     private Long id;
@@ -14,21 +19,16 @@ public class Usuario {
     private TipoPerfil tipoPerfil;
     private Long setorId;
     private String matriculaOuRegistro;
-    private String especialidade;
-    private String nivelTecnico;
-    private boolean disponivel;
     private Integer nivelAcesso;
 
     public Usuario() {
         this.ativo = true;
-        this.disponivel = false;
         this.dataCriacao = LocalDateTime.now();
     }
 
     public Usuario(Long id, String nome, String email, String senhaHash, String telefone,
                    boolean ativo, LocalDateTime dataCriacao, TipoPerfil tipoPerfil,
-                   Long setorId, String matriculaOuRegistro, String especialidade,
-                   String nivelTecnico, boolean disponivel, Integer nivelAcesso) {
+                   Long setorId, String matriculaOuRegistro, Integer nivelAcesso) {
         this.id = id;
         this.nome = nome;
         this.email = email;
@@ -39,9 +39,6 @@ public class Usuario {
         this.tipoPerfil = tipoPerfil;
         this.setorId = setorId;
         this.matriculaOuRegistro = matriculaOuRegistro;
-        this.especialidade = especialidade;
-        this.nivelTecnico = nivelTecnico;
-        this.disponivel = disponivel;
         this.nivelAcesso = nivelAcesso;
     }
 
@@ -157,30 +154,6 @@ public class Usuario {
 
     public void setMatriculaOuRegistro(String matriculaOuRegistro) {
         this.matriculaOuRegistro = matriculaOuRegistro;
-    }
-
-    public String getEspecialidade() {
-        return especialidade;
-    }
-
-    public void setEspecialidade(String especialidade) {
-        this.especialidade = especialidade;
-    }
-
-    public String getNivelTecnico() {
-        return nivelTecnico;
-    }
-
-    public void setNivelTecnico(String nivelTecnico) {
-        this.nivelTecnico = nivelTecnico;
-    }
-
-    public boolean isDisponivel() {
-        return disponivel;
-    }
-
-    public void setDisponivel(boolean disponivel) {
-        this.disponivel = disponivel;
     }
 
     public Integer getNivelAcesso() {

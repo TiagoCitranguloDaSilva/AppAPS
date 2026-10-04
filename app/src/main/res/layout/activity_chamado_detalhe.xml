@@ -9,6 +9,14 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <Button
+            android:id="@+id/button_voltar"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Voltar" />
+
+
         <TextView
             android:id="@+id/text_titulo_detalhe"
             android:layout_width="match_parent"
@@ -44,12 +52,32 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Tecnico responsavel"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spinner_tecnico"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" />
+
         <Button
             android:id="@+id/button_salvar_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:text="Salvar status" />
+
+        <Button
+            android:id="@+id/button_excluir_chamado"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Excluir chamado" />
 
         <TextView
             android:layout_width="match_parent"
@@ -84,12 +112,12 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <ListView
+        <LinearLayout
             android:id="@+id/list_comentarios"
             android:layout_width="match_parent"
-            android:layout_height="220dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:dividerHeight="1dp" />
+            android:orientation="vertical" />
 
         <TextView
             android:layout_width="match_parent"
@@ -99,12 +127,12 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <ListView
+        <LinearLayout
             android:id="@+id/list_historico"
             android:layout_width="match_parent"
-            android:layout_height="220dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:dividerHeight="1dp" />
+            android:orientation="vertical" />
 
     </LinearLayout>
 

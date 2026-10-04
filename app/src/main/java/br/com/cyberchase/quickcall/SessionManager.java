@@ -9,6 +9,7 @@ public class SessionManager {
     private static final String KEY_USUARIO_ID = "usuario_id";
     private static final String KEY_USUARIO_NOME = "usuario_nome";
     private static final String KEY_USUARIO_PERFIL = "usuario_perfil";
+    private static final String KEY_TOKEN = "token";
 
     private final SharedPreferences preferences;
 
@@ -28,6 +29,14 @@ public class SessionManager {
                 .apply();
     }
 
+    public void salvarToken(String token) {
+        preferences.edit().putString(KEY_TOKEN, token).apply();
+    }
+
+    public String obterToken() {
+        return preferences.getString(KEY_TOKEN, null);
+    }
+
     public Long obterUsuarioLogado() {
         if (!preferences.contains(KEY_USUARIO_ID)) {
             return null;
@@ -40,6 +49,7 @@ public class SessionManager {
                 .remove(KEY_USUARIO_ID)
                 .remove(KEY_USUARIO_NOME)
                 .remove(KEY_USUARIO_PERFIL)
+                .remove(KEY_TOKEN)
                 .apply();
     }
 

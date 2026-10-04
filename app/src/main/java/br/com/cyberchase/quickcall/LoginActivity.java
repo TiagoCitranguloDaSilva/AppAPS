@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import br.com.cyberchase.quickcall.data.repository.DemoDataSeeder;
 import br.com.cyberchase.quickcall.data.service.LoginApiService;
 import br.com.cyberchase.quickcall.model.Usuario;
+import br.com.cyberchase.quickcall.network.HttpJsonClient;
 import br.com.cyberchase.quickcall.network.NetworkPolicy;
 
 public class LoginActivity extends AppCompatActivity {
@@ -25,11 +26,10 @@ public class LoginActivity extends AppCompatActivity {
         NetworkPolicy.enable();
         new DemoDataSeeder(this).seedIfNeeded();
 
-        SessionManager sessionManager = new SessionManager(this);
-        if (sessionManager.estaLogado()) {
-            abrirTelaPrincipal();
-            return;
-        }
+        // O token do servidor expira depois de algumas horas.
+        // Por isso, toda vez que o app abre, pedimos o login de novo.
+        new SessionManager(this).logout();
+        HttpJsonClient.setToken(null);
 
         setContentView(R.layout.activity_login);
 
@@ -39,7 +39,7 @@ public class LoginActivity extends AppCompatActivity {
         TextView credenciaisView = findViewById(R.id.text_credenciais_demo);
 
         credenciaisView.setText(
-                "Use um usuario ja cadastrado"
+                "Teste: admin@quickcall.com / admin"
         );
 
         entrarButton.setOnClickListener(v -> realizarLogin());
@@ -57,6 +57,7 @@ public class LoginActivity extends AppCompatActivity {
         Usuario usuario = new LoginApiService().login(email, senha);
 
         if (usuario != null && usuario.getId() != null) {
+            new SessionManager(this).salvarToken(HttpJsonClient.getToken());
             new SessionManager(this).salvarSessao(
                     usuario.getId(),
                     usuario.getNome(),
@@ -66,7 +67,7 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        Toast.makeText(this, "Credenciais invalidas.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Email/senha invalidos ou servidor desligado.", Toast.LENGTH_LONG).show();
     }
 
     private void abrirTelaPrincipal() {

@@ -19,7 +19,10 @@ import java.util.List;
 import br.com.cyberchase.quickcall.data.repository.CatalogoRepository;
 import br.com.cyberchase.quickcall.data.repository.ChamadoRepository;
 import br.com.cyberchase.quickcall.data.repository.DemoDataSeeder;
+import br.com.cyberchase.quickcall.model.Categoria;
 import br.com.cyberchase.quickcall.model.Chamado;
+import br.com.cyberchase.quickcall.model.Prioridade;
+import br.com.cyberchase.quickcall.model.StatusChamado;
 import br.com.cyberchase.quickcall.network.NetworkPolicy;
 import br.com.cyberchase.quickcall.ui.UiFormatter;
 
@@ -62,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
         sairButton.setOnClickListener(v -> {
             new SessionManager(this).logout();
+            br.com.cyberchase.quickcall.network.HttpJsonClient.setToken(null);
             startActivity(new Intent(this, LoginActivity.class));
             finish();
         });
@@ -84,22 +88,26 @@ public class MainActivity extends AppCompatActivity {
         chamados.clear();
         chamados.addAll(new ChamadoRepository(this).listarTodos());
 
-        List<String> linhas = new ArrayList<>();
+        // Busca as listas do servidor UMA vez (antes buscava a cada chamado da lista).
         CatalogoRepository catalogoRepository = new CatalogoRepository();
+        List<StatusChamado> status = catalogoRepository.listarStatusPadrao();
+        List<Prioridade> prioridades = catalogoRepository.listarPrioridadesPadrao();
+        List<Categoria> categorias = catalogoRepository.listarCategoriasPadrao();
+
         SessionManager sessionManager = new SessionManager(this);
         String nomeUsuario = sessionManager.obterNomeUsuarioLogado();
         String perfilUsuario = sessionManager.obterPerfilUsuarioLogado();
 
+        // Cada item da lista: titulo na 1a linha; status, prioridade, categoria e data na 2a.
+        List<String> linhas = new ArrayList<>();
         for (Chamado chamado : chamados) {
             linhas.add(
-                    (chamado.getTitulo() == null ? "Chamado" : chamado.getTitulo())
+                    "#" + chamado.getId() + "  " + (chamado.getTitulo() == null ? "Chamado" : chamado.getTitulo())
                             + "\n"
-                            + (chamado.getDescricao() == null ? "" : chamado.getDescricao() + "\n")
-                            + UiFormatter.findStatusNome(catalogoRepository.listarStatusPadrao(), chamado.getStatusId())
-                            + " | "
-                            + UiFormatter.findPrioridadeNome(catalogoRepository.listarPrioridadesPadrao(), chamado.getPrioridadeId())
-                            + " | "
-                            + UiFormatter.formatDateTime(chamado.getDataAbertura())
+                            + UiFormatter.findStatusNome(status, chamado.getStatusId())
+                            + " | " + UiFormatter.findPrioridadeNome(prioridades, chamado.getPrioridadeId())
+                            + " | " + UiFormatter.findCategoriaNome(categorias, chamado.getCategoriaId())
+                            + " | " + UiFormatter.formatDateTime(chamado.getDataAbertura())
             );
         }
 
@@ -109,9 +117,8 @@ public class MainActivity extends AppCompatActivity {
 
         resumoView.setText(
                 "Usuario logado: " + (nomeUsuario == null ? "-" : nomeUsuario)
-                        + "\nPerfil: " + (perfilUsuario == null ? "-" : perfilUsuario)
+                        + "\nPerfil: " + (perfilUsuario == null ? "nao informado pelo servidor" : perfilUsuario)
                         + "\nChamados carregados: " + chamados.size()
-                        + "\nCategorias padrao: " + catalogoRepository.listarCategoriasPadrao().size()
         );
     }
 }

@@ -17,6 +17,24 @@ import java.nio.charset.StandardCharsets;
 
 public class HttpJsonClient {
 
+    // Token (o "cracha") recebido no login. E enviado em todos os pedidos.
+    private static String token;
+
+    public static void setToken(String novoToken) {
+        token = novoToken;
+    }
+
+    public static String getToken() {
+        return token;
+    }
+
+    // Mensagem do ultimo erro que o servidor devolveu (ex.: "O id do tecnico e obrigatorio").
+    private static String ultimoErro;
+
+    public static String getUltimoErro() {
+        return ultimoErro;
+    }
+
     public JSONArray getArray(String path) {
         try {
             String response = request("GET", path, null);
@@ -79,6 +97,9 @@ public class HttpJsonClient {
             connection.setRequestMethod(method);
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("Accept", "application/json");
+            if (token != null && !token.isEmpty()) {
+                connection.setRequestProperty("Authorization", "Bearer " + token);
+            }
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
             connection.setDoInput(true);
@@ -88,16 +109,28 @@ public class HttpJsonClient {
                 writeBody(connection, body.toString());
             }
 
+            ultimoErro = null;
             int responseCode = connection.getResponseCode();
-            InputStream stream = responseCode >= 200 && responseCode < 300
-                    ? connection.getInputStream()
-                    : connection.getErrorStream();
+            boolean sucesso = responseCode >= 200 && responseCode < 300;
+            InputStream stream = sucesso ? connection.getInputStream() : connection.getErrorStream();
+            String corpo = stream == null ? null : readBody(stream);
 
-            if (stream == null) {
-                return null;
+            // Se o servidor respondeu com erro (400, 403, 500...), NAO tratamos como sucesso.
+            // Guardamos a mensagem do servidor para mostrar na tela.
+            if (!sucesso) {
+                ultimoErro = "Erro " + responseCode;
+                try {
+                    JSONObject erro = new JSONObject(corpo);
+                    if (erro.has("mensagem")) {
+                        ultimoErro = erro.getString("mensagem");
+                    }
+                } catch (Exception ignored) {
+                    // corpo do erro nao era JSON
+                }
+                throw new IOException(ultimoErro);
             }
 
-            return readBody(stream);
+            return corpo;
         } finally {
             if (connection != null) {
                 connection.disconnect();

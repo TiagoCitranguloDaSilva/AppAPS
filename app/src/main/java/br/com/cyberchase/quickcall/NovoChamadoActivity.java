@@ -44,6 +44,9 @@ public class NovoChamadoActivity extends AppCompatActivity {
         prioridadeSpinner = findViewById(R.id.spinner_prioridade);
         Button salvarButton = findViewById(R.id.button_salvar_chamado);
 
+        // Botao Voltar: fecha esta tela e volta para a lista
+        findViewById(R.id.button_voltar).setOnClickListener(v -> finish());
+
         carregarCatalogos();
         salvarButton.setOnClickListener(v -> salvarChamado());
     }
